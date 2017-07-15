@@ -10,9 +10,12 @@ import UIKit
 
 class ViewController: UIViewController {
 
+    @IBOutlet weak var tweetTextView: UITextView!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+        
+        applyBorderToTextView()
     }
 
     override func didReceiveMemoryWarning() {
@@ -20,6 +23,11 @@ class ViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
 
-
+    func applyBorderToTextView() {
+        tweetTextView.layer.borderColor = UIColor.black.cgColor
+        tweetTextView.layer.borderWidth = 1.0
+        tweetTextView.layer.cornerRadius = 10.0
+        tweetTextView.layer.masksToBounds = true
+    }
 }
 
