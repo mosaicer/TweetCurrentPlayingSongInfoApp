@@ -9,7 +9,7 @@
 import UserNotifications
 
 struct Const {
-    static let NOTIFICATION_CATEGORY_TWEET = "category_tweet"    
+    static let NOTIFICATION_CATEGORY_TWEET = "category_tweet"
 }
 
 extension Notification.Name {

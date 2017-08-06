@@ -9,10 +9,12 @@
 import UIKit
 import MediaPlayer
 import UserNotifications
+import Social
 
 class ViewController: UIViewController {
 
     private let NOTIFICATION_MUSIC_CHANGE_REQUEST_IDENTIFIER = "music_did_changed"
+    private let NOTIFICATION_ATTACHMENT_IDENTIFIER = "artwork_image_attachment"
     
     @IBOutlet weak var tweetTextView: UITextView!
     
@@ -134,7 +136,7 @@ class ViewController: UIViewController {
         
         if let artwork = item.artwork,
             let url = saveArtworkImageTemporary(artwork: artwork),
-            let attachment = try? UNNotificationAttachment(identifier: "ArtworkImageAttachment", url: url, options: nil) {
+            let attachment = try? UNNotificationAttachment(identifier: NOTIFICATION_ATTACHMENT_IDENTIFIER, url: url, options: nil) {
             
             content.attachments.append(attachment)
         }
@@ -171,7 +173,67 @@ class ViewController: UIViewController {
     }
     
     func tweetActionSelected(notification: Notification) {
-        // TODO: do something
+        guard SLComposeViewController.isAvailable(forServiceType: SLServiceTypeTwitter) else {
+            promptSetTwitterAccount()
+            return
+        }
+        
+        guard let composeViewController = SLComposeViewController(forServiceType: SLServiceTypeTwitter) else {
+            return
+        }
+        
+        composeViewController.setInitialText(createTweetText())
+
+        if needToUploadArtwork() {
+            if let item = mediaItem, let artwork = item.artwork, let image = artwork.image(at: artwork.bounds.size) {
+                composeViewController.add(image)
+            }
+        }
+        
+        // if you handle the result
+//        composeViewController.completionHandler = {(result: SLComposeViewControllerResult) in
+//            switch result {
+//            case .done:
+//                print("done")
+//            case .cancelled:
+//                print("canceled")
+//            }
+//        }
+        
+        present(composeViewController, animated: true, completion: nil)
+    }
+    
+    func promptSetTwitterAccount() {
+        let alert = UIAlertController(title: "Twitter service is not available",
+                                      message: "To tweet song information, please set your twitter account.",
+                                      preferredStyle: .alert)
+        
+        let settingAction = UIAlertAction(title: "Setting", style: .default, handler: {(action: UIAlertAction!) in
+            // open twitter setting screen
+            if let url = URL(string:"App-Prefs:root=TWITTER") {
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            }
+        })
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        
+        alert.addAction(cancelAction)
+        alert.addAction(settingAction)
+        
+        present(alert, animated: true, completion: nil)
+    }
+    
+    func createTweetText() -> String {
+        guard let item = mediaItem else { return "" }
+
+        // TODO: retrieve texts from app setting.
+        var tweetText = ""
+        
+        return tweetText
+    }
+    
+    func needToUploadArtwork() -> Bool {
+        // TODO: check if uploading artwork is necessary, by retrieve the flag from app setting.
+        return true
     }
     
     func closeActionSelected(notification: Notification) {
