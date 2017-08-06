@@ -8,12 +8,17 @@
 
 import UIKit
 import MediaPlayer
+import UserNotifications
 
 class ViewController: UIViewController {
 
+    private let NOTIFICATION_MUSIC_CHANGE_REQUEST_IDENTIFIER = "music_did_changed"
+    
     @IBOutlet weak var tweetTextView: UITextView!
     
     let player = MPMusicPlayerController.systemMusicPlayer()
+    
+    var mediaItem: MPMediaItem?
     
     override func awakeFromNib() {
         super.awakeFromNib()
@@ -28,10 +33,20 @@ class ViewController: UIViewController {
                                        selector: #selector(type(of: self).applicationWillTerminate(notification:)),
                                        name: .UIApplicationWillTerminate,
                                        object: nil)
+        
         notificationCenter.addObserver(self,
                                        selector: #selector(type(of: self).musicDidChanged(notification:)),
                                        name: .MPMusicPlayerControllerNowPlayingItemDidChange,
                                        object: player)
+        
+        notificationCenter.addObserver(self,
+                                       selector: #selector(type(of: self).tweetActionSelected(notification:)),
+                                       name: .tweetActionSelected,
+                                       object: nil)
+        notificationCenter.addObserver(self,
+                                       selector: #selector(type(of: self).closeActionSelected(notification:)),
+                                       name: .closeActionSelected,
+                                       object: nil)
     }
     
     override func viewDidLoad() {
@@ -98,13 +113,68 @@ class ViewController: UIViewController {
         notificationCenter.removeObserver(self, name: .UIApplicationDidBecomeActive, object: nil)
         notificationCenter.removeObserver(self, name: .UIApplicationWillTerminate, object: nil)
         notificationCenter.removeObserver(self, name: .MPMusicPlayerControllerNowPlayingItemDidChange, object: player)
+        notificationCenter.removeObserver(self, name: .tweetActionSelected, object: nil)
+        notificationCenter.removeObserver(self, name: .closeActionSelected, object: nil)
     }
     
     func musicDidChanged(notification: Notification) {
-        let mediaItem: MPMediaItem? = player.nowPlayingItem
-        if let item = mediaItem {
-            // do something by using `item`
+        if let item = player.nowPlayingItem {
+            mediaItem = item
+            notifyMusicChanged()
         }
     }
-}
 
+    func notifyMusicChanged() {
+        guard let item = mediaItem else { return }
+        
+        let content = UNMutableNotificationContent()
+        content.title = item.title ?? ""
+        content.subtitle = item.artist ?? ""
+        content.body = item.albumTitle ?? ""
+        
+        if let artwork = item.artwork,
+            let url = saveArtworkImageTemporary(artwork: artwork),
+            let attachment = try? UNNotificationAttachment(identifier: "ArtworkImageAttachment", url: url, options: nil) {
+            
+            content.attachments.append(attachment)
+        }
+
+        content.categoryIdentifier = Const.NOTIFICATION_CATEGORY_TWEET
+
+        // fire after 1 second
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        
+        let request = UNNotificationRequest(identifier: NOTIFICATION_MUSIC_CHANGE_REQUEST_IDENTIFIER, content: content, trigger: trigger)
+        
+        let center = UNUserNotificationCenter.current()
+        center.add(request, withCompletionHandler: {(error) in
+            if let e = error {
+                print(e)
+            }
+        })
+    }
+    
+    func saveArtworkImageTemporary(artwork: MPMediaItemArtwork) -> URL? {
+        if let image = artwork.image(at: artwork.bounds.size),
+            let pngImageData = UIImagePNGRepresentation(image),
+            let url = NSURL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("artwork_temp.png") {
+            
+            do {
+                try pngImageData.write(to: url)
+                return url
+            } catch {
+                print(error)
+            }
+        }
+        
+        return nil
+    }
+    
+    func tweetActionSelected(notification: Notification) {
+        // TODO: do something
+    }
+    
+    func closeActionSelected(notification: Notification) {
+        // do nothing
+    }
+}

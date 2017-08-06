@@ -7,15 +7,34 @@
 //
 
 import UIKit
+import UserNotifications
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
+    private let ACTION_TWEET = "action_tweet"
+    private let ACTION_CLOSE = "action_close"
+    
     var window: UIWindow?
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        let category = UNNotificationCategory(identifier: Const.NOTIFICATION_CATEGORY_TWEET,
+                                              actions: createActions(),
+                                              intentIdentifiers: [],
+                                              options: [])
+        
+        let center = UNUserNotificationCenter.current()
+        center.setNotificationCategories([category])
+        center.delegate = self
+        center.requestAuthorization(options: [.alert], completionHandler: {(granted, error) in
+            if granted {
+                print("Allowed")
+            } else {
+                print("Didn't allowed")
+            }
+        })
+        
         return true
     }
 
@@ -43,6 +62,37 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
 
-
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler(.alert)
+    }
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        switch response.actionIdentifier {
+        case ACTION_TWEET:
+            let center = NotificationCenter.default
+            center.post(name: .tweetActionSelected, object: nil)
+        case ACTION_CLOSE:
+            let center = NotificationCenter.default
+            center.post(name: .closeActionSelected, object: nil)
+        // do nothing when notification dialog itself is clicked
+        default:
+            break
+        }
+        
+        completionHandler()
+    }
+    
+    func createActions() -> [UNNotificationAction] {
+        // add option ".foreground", if you want to open this app by tapping tweetAction button when the device is locked.
+        let tweetAction = UNNotificationAction(identifier: ACTION_TWEET,
+                                               title: "Tweet",
+                                               options: [.destructive])
+        
+        let closeAction = UNNotificationAction(identifier: ACTION_CLOSE,
+                                               title: "Close",
+                                               options: [])
+        
+        return [tweetAction, closeAction]
+    }
 }
 
